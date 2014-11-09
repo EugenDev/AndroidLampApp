@@ -202,7 +202,6 @@ class LampThread extends Thread {
     public LampThread(BluetoothAdapter adapter, String deviceName) throws Exception {
         m_adapter = adapter;
         m_deviceName = deviceName;
-        int t;
         boolean deviceFounded = false;
         for (BluetoothDevice device : m_adapter.getBondedDevices())
         {
