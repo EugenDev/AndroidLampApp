@@ -18,13 +18,11 @@ import android.widget.TextView;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Array;
+import java.io.OutputStream;
+import java.lang.annotation.ElementType;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.UUID;
 
 
@@ -127,7 +125,9 @@ public class MainActivity extends Activity implements IMessageReceivedListener
     private void connectToDevice() {
         try {
             Log.d("connectToDevice", "Starting lamp thread.");
-            _lampThread = new LampThread(BluetoothAdapter.getDefaultAdapter(), "EUGENY-LAPTOP");
+            String serverName = "MoodLamp";
+            //String serverName = "EUGENY-LAPTOP";
+            _lampThread = new LampThread(BluetoothAdapter.getDefaultAdapter(), serverName);
             _lampThread.start();
             _lampThread.addMessageReceivedListener(this);
             Log.d("connectToDevice", "Lamp thread started.");
@@ -203,15 +203,19 @@ class LampThread extends Thread {
         m_adapter = adapter;
         m_deviceName = deviceName;
         boolean deviceFounded = false;
-        for (BluetoothDevice device : m_adapter.getBondedDevices())
-        {
-            if(device.getName().equals(m_deviceName))
-            {
-                m_device = device;
-                Log.d("LampThread constructor", "Lamp device founded");
-                deviceFounded = true;
-                m_socket = m_device.createInsecureRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-                Log.d("LampThread constructor", "Socket created");
+        while (!deviceFounded) {
+            for (BluetoothDevice device : m_adapter.getBondedDevices()) {
+                if (device.getName().equals(m_deviceName)) {
+                    m_device = device;
+                    Log.d("LampThread constructor", "Lamp device founded");
+                    deviceFounded = true;
+                    m_socket = m_device.createInsecureRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+                    Log.d("LampThread constructor", "Socket created");
+                }
+            }
+            try {
+                sleep(1000);
+            } catch (Exception ex) {
             }
         }
         if (!deviceFounded) {
@@ -221,11 +225,11 @@ class LampThread extends Thread {
 
     private boolean isWork = true;
     private BluetoothSocket m_socket;
-    private byte[] buffer = new byte[1024];
-    private int nBytes;
 
     @Override
     public void run() {
+        byte[] buffer = new byte[1024];
+        int nBytes;
         while(isWork) {
             try {
                 if (!m_socket.isConnected()) {
@@ -235,11 +239,9 @@ class LampThread extends Thread {
                 Log.d("LampThread-run", "Socket connected. Trying to read data");
                 InputStream iStream = m_socket.getInputStream();
                 nBytes = iStream.read(buffer);
-                Log.d("LampThread-run", nBytes + " bytes received");
-                byte b[] = Arrays.copyOfRange(buffer, 0, nBytes);
-                String resString = new String(b, "UTF-8");
-                onMessageReceived(resString);
-                Log.d("LampThread-run", nBytes + " bytes received");
+                Log.d("LampThread-run", nBytes + " bytes received. Processing");
+                processMessage(buffer, nBytes);
+                Log.d("LampThread-run", "Data processed");
 
             } catch (Exception ex) {
                 Log.d("LampThread-run exception", "Error: " + ex.getMessage());
@@ -249,6 +251,16 @@ class LampThread extends Thread {
                 }
             }
         }
+        Log.d("LampThread-run", "Closing streams");
+        try {
+            InputStream inputStream = m_socket.getInputStream();
+            inputStream.close();
+            OutputStream outputStream = m_socket.getOutputStream();
+            outputStream.close();
+        }catch(Exception ex){
+            Log.d("LampThread-run","Error while closing streams");
+        }
+
         Log.d("LampThread-run", "Thread finished");
     }
 
@@ -256,11 +268,144 @@ class LampThread extends Thread {
         isWork = false;
     }
 
+    private void processMessage(byte[] buffer, int nBytes)
+    {
+        if(nBytes < 7) {
+            return;
+        }
+    }
+
     private void onMessageReceived(String msg) {
         for(IMessageReceivedListener listener : messageReceivedListeners) {
             listener.MessageReceived(msg);
         }
     }
+}
+
+class LampMessage {
+    private int MESSAGE_LENGTH = 7;
+    private byte START_BYTE = 0x42;
+    private byte STOP_BYTE = 0x45;
+
+    public boolean isValid() {
+        return (messageData[MESSAGE_LENGTH - 2] == GetCheckSum())
+                && (messageData[0] == START_BYTE && (messageData[MESSAGE_LENGTH - 1] == STOP_BYTE));
+    }
+
+    private byte GetCheckSum() {
+        byte tmp = 0;
+        for (int i = 1; i < MESSAGE_LENGTH - 2; i++)
+        {
+            tmp += messageData[i];
+        }
+        return tmp;
+    }
+
+    private void RecalculateCheckSum() {
+        messageData[MESSAGE_LENGTH - 2] = GetCheckSum();
+    }
+
+    private byte[] messageData;
+
+    public MessageType getMessageType() {
+        switch(messageData[1]) {
+            case 1:
+                return MessageType.PARAMETERS_RESPONSE;
+            case 2:
+                return MessageType.COLOR;
+            case 3:
+                return MessageType.PARAMETERS_REQUEST;
+            default:
+            case 0:
+                return MessageType.NONE;
+        }
+    }
+    public void setMessageType(MessageType messageType) {
+        switch (messageType){
+            case NONE:
+                messageData[1] = 0;
+            case PARAMETERS_RESPONSE:
+                messageData[1] = 1;
+            case COLOR:
+                messageData[1] = 2;
+            case PARAMETERS_REQUEST:
+                messageData[1] = 3;
+        }
+        RecalculateCheckSum();
+    }
+
+    public byte getRed() {
+        return messageData[2];
+    }
+    public void setRed(byte value) {
+        messageData[2] = value;
+        RecalculateCheckSum();
+    }
+
+    public byte getGreen() {
+        return messageData[3];
+    }
+    public void setGreen(byte value) {
+        messageData[3] = value;
+        RecalculateCheckSum();
+    }
+
+    public byte getBlue() {
+        return messageData[4];
+    }
+    public void setBlue(byte value) {
+        messageData[4] = value;
+        RecalculateCheckSum();
+    }
+
+    public byte getBrightness() {
+        return messageData[2];
+    }
+    public void setBrightness(byte value) {
+        messageData[2] = value;
+        RecalculateCheckSum();
+    }
+
+    public byte getSpeed() {
+        return messageData[3];
+    }
+    public void setSpeed(byte value) {
+        messageData[3] = value;
+        RecalculateCheckSum();
+    }
+
+    public byte getHold() {
+        return messageData[4];
+    }
+    public void setHold(byte value) {
+        messageData[4] = value;
+        RecalculateCheckSum();
+    }
+
+    public LampMessage() {
+        messageData = new byte[MESSAGE_LENGTH];
+        messageData[0] = START_BYTE;
+        messageData[MESSAGE_LENGTH - 1] = STOP_BYTE;
+        setMessageType(MessageType.NONE);
+    }
+
+    public static void WriteMessage(OutputStream stream, LampMessage message) throws IOException {
+        stream.write(message.messageData);
+    }
+
+    public static LampMessage ReadMessage(InputStream stream) throws IOException {
+        LampMessage m = new LampMessage();
+        stream.read(m.messageData);
+        return m;
+    }
+}
+
+enum MessageType {
+
+    NONE,
+    PARAMETERS_RESPONSE,
+    COLOR,
+    PARAMETERS_REQUEST
 }
 
 interface IMessageReceivedListener {
