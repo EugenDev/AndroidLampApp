@@ -7,8 +7,9 @@
     <string name="red_label_text">Red:</string>
     <string name="green_label_text">Green:</string>
     <string name="blue_label_text">Blue:</string>
-
     <string name="lamp_online_status_string">Lamp online</string>
     <string name="lamp_offline_status_string">Lamp offline</string>
+    <string name="title_activity_secondary">MessageReceiver</string>
+    <string name="connect_button_text">Connect</string>
 
 </resources>
