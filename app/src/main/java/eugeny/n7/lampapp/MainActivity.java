@@ -17,7 +17,7 @@ import android.widget.Toast;
 import java.util.UUID;
 
 
-public class MainActivity extends Activity implements DataReceivedListener {
+public class MainActivity extends Activity implements LampMessageListener {
     private static final String TAG = "MainActivity";
     private static final int REQUEST_ENABLE_BT = 1;
 
@@ -27,22 +27,52 @@ public class MainActivity extends Activity implements DataReceivedListener {
     private SeekBar greenSeekBar;
     private SeekBar blueSeekBar;
 
+    private SeekBar brightnessSeekBar;
+    private SeekBar speedSeekBar;
+    private SeekBar holdSeekBar;
+
     private SurfaceView surfaceView;
     private TextView statusTextView;
 
     private BluetoothAdapter bluetoothAdapter = null;
     private static final String DEVICE_NAME = "MoodLamp";
     private DataReceiver dataReceiver = null;
+    private LampMessageClient lampMessageClient = null;
 
-    private void ProcessColorChanging() {
-        int newColor = Color.rgb(redSeekBar.getProgress(), greenSeekBar.getProgress(), blueSeekBar.getProgress());
+    private void processColorChanging() {
+        int red = redSeekBar.getProgress();
+        int green = greenSeekBar.getProgress();
+        int blue = blueSeekBar.getProgress();
+        lampMessageClient.sendColor(red, green, blue);
+        int newColor = Color.rgb(red, green, blue);
         surfaceView.setBackgroundColor(newColor);
     }
 
-    private SeekBar.OnSeekBarChangeListener seekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+    private SeekBar.OnSeekBarChangeListener colorChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            ProcessColorChanging();
+            processColorChanging();
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+        }
+    };
+
+    private SeekBar.OnSeekBarChangeListener parametersChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+            int bright = brightnessSeekBar.getProgress();
+            int speed = speedSeekBar.getProgress();
+            int hold = holdSeekBar.getProgress();
+            String str = "" + bright + " " + speed + " " + hold;
+            ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
+            runOnUiThread(changeUiTextThread);
+            lampMessageClient.sendState(bright, speed, hold);
         }
 
         @Override
@@ -66,13 +96,25 @@ public class MainActivity extends Activity implements DataReceivedListener {
         greenSeekBar = (SeekBar)findViewById(R.id.greenSeekBar);
         blueSeekBar = (SeekBar)findViewById(R.id.blueSeekBar);
 
-        redSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
-        greenSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
-        blueSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
+        redSeekBar.setOnSeekBarChangeListener(colorChangeListener);
+        greenSeekBar.setOnSeekBarChangeListener(colorChangeListener);
+        blueSeekBar.setOnSeekBarChangeListener(colorChangeListener);
+
+        brightnessSeekBar = (SeekBar)findViewById(R.id.brightnessSeekBar);
+        speedSeekBar = (SeekBar)findViewById(R.id.speedSeekBar);
+        holdSeekBar = (SeekBar)findViewById(R.id.holdSeekBar);
+
+        brightnessSeekBar.setOnSeekBarChangeListener(parametersChangeListener);
+        speedSeekBar.setOnSeekBarChangeListener(parametersChangeListener);
+        holdSeekBar.setOnSeekBarChangeListener(parametersChangeListener);
 
         statusTextView = (TextView)findViewById(R.id.statusTextView);
         surfaceView = (SurfaceView)findViewById(R.id.surfaceView);
 
+        initBluetooth();
+    }
+
+    private void initBluetooth(){
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
         {
@@ -115,11 +157,12 @@ public class MainActivity extends Activity implements DataReceivedListener {
             return;
         }
         try {
-
             BluetoothSocket socket = myDevice.createInsecureRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
             dataReceiver = new DataReceiver(socket);
-            dataReceiver.addDateReceivedListener(this);
+            lampMessageClient = new LampMessageClient(dataReceiver);
+            lampMessageClient.addLampMessageListener(this);
             dataReceiver.start();
+            requestStateThread.start();
         } catch (Exception ex) {
             Log.e(TAG, "Error while creating bluetooth socket " + ex.getMessage());
         }
@@ -146,6 +189,7 @@ public class MainActivity extends Activity implements DataReceivedListener {
     @Override
     protected void onStop() {
         Log.i(TAG, "onStop");
+        lampMessageClient = null;
         if(dataReceiver != null && dataReceiver.isAlive()) {
             dataReceiver.stopThread();
             dataReceiver = null;
@@ -177,14 +221,6 @@ public class MainActivity extends Activity implements DataReceivedListener {
         super.onRestart();
     }
 
-    //TODO: Listen to event and do something useful
-    @Override
-    public void dataReceived(byte[] data) {
-        String s = new String(data);
-        Log.i(TAG + "dataReceived", s);
-        this.runOnUiThread(new ChangeUiTextThread(s));
-    }
-
     class ChangeUiTextThread implements Runnable {
         private String m_string;
         public ChangeUiTextThread(String s)
@@ -202,4 +238,81 @@ public class MainActivity extends Activity implements DataReceivedListener {
         Toast toast = Toast.makeText(appContext, msgText, Toast.LENGTH_SHORT);
         toast.show();
     }
+
+    //********************** Для отображения цвета лампы ***********************
+    class ChangeColorThread implements Runnable {
+        private int m_red = 0;
+        private int m_green = 0;
+        private int m_blue = 0;
+
+        public void setColor(int red, int green, int blue){
+            m_red = red;
+            m_green = green;
+            m_blue = blue;
+        }
+
+        @Override
+        public void run() {
+            int new_color = Color.rgb(m_red, m_green, m_blue);
+            surfaceView.setBackgroundColor(new_color);
+        }
+    }
+
+    private ChangeColorThread changeColorThread = new ChangeColorThread();
+
+    @Override
+    public void colorReceived(int red, int green, int blue) {
+        changeColorThread.setColor(red, green, blue);
+        runOnUiThread(changeColorThread);
+    }
+
+    //******************* Для отображения состояния лампы **********************
+    class ChangeStateThread implements Runnable {
+        private int m_speed = 0;
+        private int m_hold = 0;
+        private int m_brightness = 0;
+
+        public void setValues(int speed, int hold, int brightness) {
+            m_speed = speed;
+            m_hold = hold;
+            m_brightness = brightness;
+        }
+
+        @Override
+        public void run() {
+//            brightnessSeekBar.setProgress(m_brightness);
+//            speedSeekBar.setProgress(m_speed);
+//            holdSeekBar.setProgress(m_hold);
+        }
+    }
+
+    private ChangeStateThread changeStateThread = new ChangeStateThread();
+
+    @Override
+    public void stateReceived(int brightness, int speed, int hold) {
+        firstTimeStateReceived = true;
+        changeStateThread.setValues(speed, hold, brightness);
+        runOnUiThread(changeStateThread);
+    }
+
+    //******************* Для запроса состояния лампы **************************
+    private boolean firstTimeStateReceived = false;
+
+    class RequestStateThread extends Thread {
+        @Override
+        public void run() {
+            while(!firstTimeStateReceived){
+                try {
+                    if (lampMessageClient != null) {
+                        lampMessageClient.sendParametersRequest();
+                    }
+                    Thread.sleep(1000);
+                } catch (Exception ex) {
+                  Log.d(TAG, "Unexpected error in RequestStateThread: " + ex.getMessage());
+                }
+            }
+        }
+    }
+
+    private RequestStateThread requestStateThread = new RequestStateThread();
 }

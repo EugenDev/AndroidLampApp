@@ -11,5 +11,9 @@
     <string name="lamp_offline_status_string">Lamp offline</string>
     <string name="title_activity_secondary">MessageReceiver</string>
     <string name="connect_button_text">Connect</string>
+    <string name="table_header">Parameters</string>
+    <string name="hold_label_text">Hold:</string>
+    <string name="speed_label_text">Speed:</string>
+    <string name="bright_label_text">Bright:</string>
 
 </resources>

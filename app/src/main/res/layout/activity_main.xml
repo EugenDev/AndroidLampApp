@@ -13,45 +13,111 @@
         android:layout_alignParentStart="true"
         android:id="@+id/mainLayout">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/red_label_text"
-            android:id="@+id/redTextLabel"
-            android:singleLine="false" />
-
-        <SeekBar
+        <TableLayout
+            android:id="@+id/tableLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/redSeekBar"
-            android:indeterminate="false"
-            android:max="255" />
+            android:stretchColumns="1">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/green_label_text"
-            android:id="@+id/greenTextLabel"
-            android:singleLine="false" />
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/red_label_text"
+                    android:id="@+id/redTextLabel"
+                    android:singleLine="false" />
 
-        <SeekBar
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/greenSeekBar"
-            android:max="255" />
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/redSeekBar"
+                    android:indeterminate="false"
+                    android:max="255" />
+            </TableRow>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/blue_label_text"
-            android:id="@+id/blueTextLabel"
-            android:singleLine="false" />
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/green_label_text"
+                    android:id="@+id/greenTextLabel"
+                    android:singleLine="false" />
 
-        <SeekBar
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/blueSeekBar"
-            android:max="255" />
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/greenSeekBar"
+                    android:max="255" />
+            </TableRow>
+
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/blue_label_text"
+                    android:id="@+id/blueTextLabel"
+                    android:singleLine="false" />
+
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/blueSeekBar"
+                    android:max="255" />
+            </TableRow>
+
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/bright_label_text"
+                    android:id="@+id/brightnessTextLabel"
+                    android:singleLine="false"/>
+
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/brightnessSeekBar"
+                    android:indeterminate="false"
+                    android:max="255" />
+            </TableRow>
+
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/speed_label_text"
+                    android:id="@+id/speedTextLabel"
+                    android:singleLine="false" />
+
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/speedSeekBar"
+                    android:max="255" />
+            </TableRow>
+
+            <TableRow
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/hold_label_text"
+                    android:id="@+id/holdTextLabel"
+                    android:singleLine="false"/>
+
+                <SeekBar
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/holdSeekBar"
+                    android:max="255" />
+            </TableRow>
+
+        </TableLayout>
 
         <TextView
             android:layout_width="wrap_content"
@@ -62,8 +128,8 @@
         <SurfaceView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/surfaceView"
-            android:layout_gravity="center_horizontal" />
+            android:id="@+id/surfaceView" />
 
     </LinearLayout>
+
 </RelativeLayout>
