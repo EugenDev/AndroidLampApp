@@ -15,5 +15,7 @@
     <string name="hold_label_text">Hold:</string>
     <string name="speed_label_text">Speed:</string>
     <string name="bright_label_text">Bright:</string>
+    <string name="settings_bg_color_confirm">Hello!</string>
+    <string name="settings_default_color_confirm">Hello?</string>
 
 </resources>

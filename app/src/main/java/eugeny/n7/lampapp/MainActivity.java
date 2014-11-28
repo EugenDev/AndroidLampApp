@@ -39,19 +39,15 @@ public class MainActivity extends Activity implements LampMessageListener {
     private DataReceiver dataReceiver = null;
     private LampMessageClient lampMessageClient = null;
 
-    private void processColorChanging() {
-        int red = redSeekBar.getProgress();
-        int green = greenSeekBar.getProgress();
-        int blue = blueSeekBar.getProgress();
-        lampMessageClient.sendColor(red, green, blue);
-        int newColor = Color.rgb(red, green, blue);
-        surfaceView.setBackgroundColor(newColor);
-    }
-
     private SeekBar.OnSeekBarChangeListener colorChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            processColorChanging();
+            int red = redSeekBar.getProgress();
+            int green = greenSeekBar.getProgress();
+            int blue = blueSeekBar.getProgress();
+            lampMessageClient.sendColor(red, green, blue);
+            //int newColor = Color.rgb(red, green, blue);
+            //surfaceView.setBackgroundColor(newColor);
         }
 
         @Override
@@ -66,13 +62,15 @@ public class MainActivity extends Activity implements LampMessageListener {
     private SeekBar.OnSeekBarChangeListener parametersChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            int bright = brightnessSeekBar.getProgress();
-            int speed = speedSeekBar.getProgress();
-            int hold = holdSeekBar.getProgress();
-            String str = "" + bright + " " + speed + " " + hold;
-            ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
-            runOnUiThread(changeUiTextThread);
-            lampMessageClient.sendState(bright, speed, hold);
+            if(!stateReceiving) {
+                int bright = brightnessSeekBar.getProgress();
+                int speed = speedSeekBar.getProgress();
+                int hold = holdSeekBar.getProgress();
+                String str = "" + bright + " " + speed + " " + hold;
+                ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
+                runOnUiThread(changeUiTextThread);
+                lampMessageClient.sendState(bright, speed, hold);
+            }
         }
 
         @Override
@@ -241,19 +239,14 @@ public class MainActivity extends Activity implements LampMessageListener {
 
     //********************** Для отображения цвета лампы ***********************
     class ChangeColorThread implements Runnable {
-        private int m_red = 0;
-        private int m_green = 0;
-        private int m_blue = 0;
+        private int new_color = 0;
 
         public void setColor(int red, int green, int blue){
-            m_red = red;
-            m_green = green;
-            m_blue = blue;
+            new_color = Color.rgb(red, green, blue);
         }
 
         @Override
         public void run() {
-            int new_color = Color.rgb(m_red, m_green, m_blue);
             surfaceView.setBackgroundColor(new_color);
         }
     }
@@ -280,11 +273,15 @@ public class MainActivity extends Activity implements LampMessageListener {
 
         @Override
         public void run() {
+            stateReceiving = true;
 //            brightnessSeekBar.setProgress(m_brightness);
 //            speedSeekBar.setProgress(m_speed);
 //            holdSeekBar.setProgress(m_hold);
+            stateReceiving = false;
         }
     }
+
+    private boolean stateReceiving = false;
 
     private ChangeStateThread changeStateThread = new ChangeStateThread();
 

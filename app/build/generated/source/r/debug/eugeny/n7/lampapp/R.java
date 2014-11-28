@@ -54,9 +54,11 @@ public final class R {
         public static final int lamp_offline_status_string=0x7f050008;
         public static final int lamp_online_status_string=0x7f050009;
         public static final int red_label_text=0x7f05000a;
-        public static final int speed_label_text=0x7f05000b;
-        public static final int table_header=0x7f05000c;
-        public static final int title_activity_secondary=0x7f05000d;
+        public static final int settings_bg_color_confirm=0x7f05000b;
+        public static final int settings_default_color_confirm=0x7f05000c;
+        public static final int speed_label_text=0x7f05000d;
+        public static final int table_header=0x7f05000e;
+        public static final int title_activity_secondary=0x7f05000f;
     }
     public static final class style {
         /**  Customize your theme here. 

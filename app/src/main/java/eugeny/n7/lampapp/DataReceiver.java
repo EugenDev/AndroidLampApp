@@ -157,14 +157,19 @@ public final class DataReceiver extends Thread {
             return;
         }
 
-        int[] message = new int[MESSAGE_LENGTH];
+        byte[] message = new byte[MESSAGE_LENGTH];
         message[0] = START_BYTE;
         for(int i = 1; i <= COMMAND_LENGTH; i++) {
-            message[i] = data[i - 1];
+            message[i] = (byte)data[i - 1];
         }
-        message[MESSAGE_LENGTH - 2] = calcChecksum(data, COMMAND_LENGTH);
+        message[MESSAGE_LENGTH - 2] = (byte)calcChecksum(data, COMMAND_LENGTH);
         message[MESSAGE_LENGTH - 1] = STOP_BYTE;
 
+        try {
+            m_outStream.write(message);
+        } catch (Exception ex) {
+            Log.e(TAG, "Error while sending message: " + ex.getMessage());
+        }
         //TODO: Implement bytes sending
         //Log.d(TAG, "" + data[0] +data[1] + data[2] + data[3]);
     }
