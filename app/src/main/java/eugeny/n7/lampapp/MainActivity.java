@@ -39,15 +39,20 @@ public class MainActivity extends Activity implements LampMessageListener {
     private DataReceiver dataReceiver = null;
     private LampMessageClient lampMessageClient = null;
 
+    private boolean handlingEnabled = true;
+
     private SeekBar.OnSeekBarChangeListener colorChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            int red = redSeekBar.getProgress();
-            int green = greenSeekBar.getProgress();
-            int blue = blueSeekBar.getProgress();
-            lampMessageClient.sendColor(red, green, blue);
-            //int newColor = Color.rgb(red, green, blue);
-            //surfaceView.setBackgroundColor(newColor);
+            if(handlingEnabled) {
+                int red = redSeekBar.getProgress();
+                int green = greenSeekBar.getProgress();
+                int blue = blueSeekBar.getProgress();
+                lampMessageClient.sendColor(red, green, blue);
+                String str = "Color: " + red + " " + green + " " + blue;
+                ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
+                runOnUiThread(changeUiTextThread);
+            }
         }
 
         @Override
@@ -62,14 +67,14 @@ public class MainActivity extends Activity implements LampMessageListener {
     private SeekBar.OnSeekBarChangeListener parametersChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            if(!stateReceiving) {
+            if(handlingEnabled) {
                 int bright = brightnessSeekBar.getProgress();
                 int speed = speedSeekBar.getProgress();
                 int hold = holdSeekBar.getProgress();
+                lampMessageClient.sendState(bright, speed, hold);
                 String str = "" + bright + " " + speed + " " + hold;
                 ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
                 runOnUiThread(changeUiTextThread);
-                lampMessageClient.sendState(bright, speed, hold);
             }
         }
 
@@ -112,23 +117,19 @@ public class MainActivity extends Activity implements LampMessageListener {
         initBluetooth();
     }
 
-    private void initBluetooth(){
+    private void initBluetooth() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(bluetoothAdapter == null)
-        {
-            Log.i("onCreate", "Bluetooth not supported.");
+        if(bluetoothAdapter == null) {
+            Log.i(TAG, "Bluetooth not supported.");
             toastMessage("Bluetooth is not supported on this device");
             finish();
         }
 
-        if (!bluetoothAdapter.isEnabled())
-        {
+        if (!bluetoothAdapter.isEnabled()) {
             Log.i(TAG, "Bluetooth disabled. Requesting to enable.");
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        }
-        else
-        {
+        } else {
             Log.i(TAG, "Bluetooth already enabled.");
         }
     }
@@ -221,8 +222,7 @@ public class MainActivity extends Activity implements LampMessageListener {
 
     class ChangeUiTextThread implements Runnable {
         private String m_string;
-        public ChangeUiTextThread(String s)
-        {
+        public ChangeUiTextThread(String s) {
             m_string = s;
         }
 
@@ -255,8 +255,10 @@ public class MainActivity extends Activity implements LampMessageListener {
 
     @Override
     public void colorReceived(int red, int green, int blue) {
+        handlingEnabled = false;
         changeColorThread.setColor(red, green, blue);
         runOnUiThread(changeColorThread);
+        handlingEnabled = true;
     }
 
     //******************* Для отображения состояния лампы **********************
@@ -273,23 +275,21 @@ public class MainActivity extends Activity implements LampMessageListener {
 
         @Override
         public void run() {
-            stateReceiving = true;
-//            brightnessSeekBar.setProgress(m_brightness);
-//            speedSeekBar.setProgress(m_speed);
-//            holdSeekBar.setProgress(m_hold);
-            stateReceiving = false;
+            brightnessSeekBar.setProgress(m_brightness);
+            speedSeekBar.setProgress(m_speed);
+            holdSeekBar.setProgress(m_hold);
         }
     }
-
-    private boolean stateReceiving = false;
 
     private ChangeStateThread changeStateThread = new ChangeStateThread();
 
     @Override
     public void stateReceived(int brightness, int speed, int hold) {
+        handlingEnabled = false;
         firstTimeStateReceived = true;
         changeStateThread.setValues(speed, hold, brightness);
         runOnUiThread(changeStateThread);
+        handlingEnabled = true;
     }
 
     //******************* Для запроса состояния лампы **************************
@@ -305,7 +305,7 @@ public class MainActivity extends Activity implements LampMessageListener {
                     }
                     Thread.sleep(1000);
                 } catch (Exception ex) {
-                  Log.d(TAG, "Unexpected error in RequestStateThread: " + ex.getMessage());
+                  Log.e(TAG, "Unexpected error in RequestStateThread: " + ex.getMessage());
                 }
             }
         }
