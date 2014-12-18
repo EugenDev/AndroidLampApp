@@ -40,7 +40,7 @@ public final class DataReceiver extends Thread {
                 m_dataInputStream = new DataInputStream(m_inStream);
                 m_outStream = m_socket.getOutputStream();
             } catch (Exception ex) {
-                Log.e(TAG + " connect()", "Error: " + ex.getMessage());
+                Log.i(TAG + " connect()", "Error: " + ex.getMessage());
             }
         }
     }
@@ -78,7 +78,7 @@ public final class DataReceiver extends Thread {
     private static byte COMMAND_LENGTH = 4;
     private static byte MESSAGE_LENGTH = 7;
 
-    private byte checksum = 0;
+    private int checksum = 0;
     private int command_pointer = 0;
     private int[] command_buffer = new int[COMMAND_LENGTH];
 
@@ -95,15 +95,11 @@ public final class DataReceiver extends Thread {
                     }
                 }
                 else if (0 < command_pointer && command_pointer < MESSAGE_LENGTH - 2) {
-                    if(received_byte < 0) {
-                        command_buffer[command_pointer - 1] = received_byte + 256;
-                    } else {
-                        command_buffer[command_pointer - 1] = received_byte;
-                    }
+                    command_buffer[command_pointer - 1] = getInt(received_byte);
                     command_pointer++;
                 }
                 else if (command_pointer == MESSAGE_LENGTH - 2) {
-                    checksum = received_byte;
+                    checksum = getInt(received_byte);
                     command_pointer++;
                 }
                 else if (command_pointer == MESSAGE_LENGTH - 1) {
@@ -118,13 +114,13 @@ public final class DataReceiver extends Thread {
                 }
             } catch (Exception ex) {
                 command_pointer = 0;
-                Log.d(TAG + "-run", "Error: " + ex.getMessage());
+                Log.e(TAG + "-run", "Error: " + ex.getMessage());
                 try { sleep(2000); } catch (Exception ex2) {
                     Log.e(TAG + "-run", "Error while sleeping =)");
                 }
             }
         }
-        Log.d(TAG + "-run", "Thread finished");
+        Log.i(TAG + "-run", "Thread finished");
     }
 
     private boolean checksumIsValid() {
@@ -153,16 +149,16 @@ public final class DataReceiver extends Thread {
     }
 
     public void sendData(int[] data) {
-        if(data.length != 4){
+        if(data.length != 4) {
             return;
         }
 
         byte[] message = new byte[MESSAGE_LENGTH];
         message[0] = START_BYTE;
         for(int i = 1; i <= COMMAND_LENGTH; i++) {
-            message[i] = (byte)data[i - 1];
+            message[i] = getByte(data[i - 1]);
         }
-        message[MESSAGE_LENGTH - 2] = (byte)calcChecksum(data, COMMAND_LENGTH);
+        message[MESSAGE_LENGTH - 2] = getByte(calcChecksum(data, COMMAND_LENGTH));
         message[MESSAGE_LENGTH - 1] = STOP_BYTE;
 
         try {
@@ -170,7 +166,13 @@ public final class DataReceiver extends Thread {
         } catch (Exception ex) {
             Log.e(TAG, "Error while sending message: " + ex.getMessage());
         }
-        //TODO: Implement bytes sending
-        //Log.d(TAG, "" + data[0] +data[1] + data[2] + data[3]);
+    }
+
+    private int getInt(byte b) {
+        return b & 0xFF;
+    }
+
+    private byte getByte(int i) {
+        return (byte)i;
     }
 }
