@@ -17,15 +17,11 @@ import android.widget.Toast;
 import java.util.UUID;
 
 
-public class MainActivity extends Activity implements LampMessageListener {
+public class MainActivity extends Activity implements LampMessageListener, ColorPickerView.OnColorChangedListener {
     private static final String TAG = "MainActivity";
     private static final int REQUEST_ENABLE_BT = 1;
 
     private Context appContext = null;
-
-    private SeekBar redSeekBar;
-    private SeekBar greenSeekBar;
-    private SeekBar blueSeekBar;
 
     private SeekBar brightnessSeekBar;
     private SeekBar speedSeekBar;
@@ -34,35 +30,14 @@ public class MainActivity extends Activity implements LampMessageListener {
     private SurfaceView surfaceView;
     private TextView statusTextView;
 
+    private ColorPickerView colorPicker;
+
     private BluetoothAdapter bluetoothAdapter = null;
     private static final String DEVICE_NAME = "MoodLamp";
     private DataReceiver dataReceiver = null;
     private LampMessageClient lampMessageClient = null;
 
     private boolean handlingEnabled = true;
-
-    private SeekBar.OnSeekBarChangeListener colorChangeListener = new SeekBar.OnSeekBarChangeListener() {
-        @Override
-        public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            if(handlingEnabled) {
-                int red = redSeekBar.getProgress();
-                int green = greenSeekBar.getProgress();
-                int blue = blueSeekBar.getProgress();
-                lampMessageClient.sendColor(red, green, blue);
-                String str = "Color: " + red + " " + green + " " + blue;
-                ChangeUiTextThread changeUiTextThread = new ChangeUiTextThread(str);
-                runOnUiThread(changeUiTextThread);
-            }
-        }
-
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {
-        }
-
-        @Override
-        public void onStopTrackingTouch(SeekBar seekBar) {
-        }
-    };
 
     private SeekBar.OnSeekBarChangeListener parametersChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
@@ -95,14 +70,6 @@ public class MainActivity extends Activity implements LampMessageListener {
 
         appContext = getApplicationContext();
 
-        redSeekBar = (SeekBar)findViewById(R.id.redSeekBar);
-        greenSeekBar = (SeekBar)findViewById(R.id.greenSeekBar);
-        blueSeekBar = (SeekBar)findViewById(R.id.blueSeekBar);
-
-        redSeekBar.setOnSeekBarChangeListener(colorChangeListener);
-        greenSeekBar.setOnSeekBarChangeListener(colorChangeListener);
-        blueSeekBar.setOnSeekBarChangeListener(colorChangeListener);
-
         brightnessSeekBar = (SeekBar)findViewById(R.id.brightnessSeekBar);
         speedSeekBar = (SeekBar)findViewById(R.id.speedSeekBar);
         holdSeekBar = (SeekBar)findViewById(R.id.holdSeekBar);
@@ -113,6 +80,9 @@ public class MainActivity extends Activity implements LampMessageListener {
 
         statusTextView = (TextView)findViewById(R.id.statusTextView);
         surfaceView = (SurfaceView)findViewById(R.id.surfaceView);
+
+        colorPicker = (ColorPickerView)findViewById(R.id.colorPicker);
+        colorPicker.setOnColorChangedListener(this);
 
         initBluetooth();
     }
@@ -218,6 +188,11 @@ public class MainActivity extends Activity implements LampMessageListener {
     protected void onRestart() {
         Log.i(TAG, "onRestart");
         super.onRestart();
+    }
+
+    @Override
+    public void onColorChanged(int color) {
+        surfaceView.setBackgroundColor(color);
     }
 
     class ChangeUiTextThread implements Runnable {
